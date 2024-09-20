@@ -1,0 +1,18 @@
+# Mail settings
+IMAP_SERVER = 'imap.yourhost.com'
+IMAP_PORT = 993
+USERNAME = 'your@email'
+PASSWORD = 'yourPassword'
+MAILBOX_FOLDER = "Rocketbook"
+MAIL_CHECK_INTERVAL = 60 # [sec]
+
+# Conversion settings
+CONFIG_REMOVE_LINE_ENDINGS = True
+TAG_TO_PATH_CONVERSION = {
+    'Rocketbook': 'notes/rocketbook', # Default tag with default path
+    'YourTag1': '/your/path/for/your/notes_tag1',
+    'YourTag2': '/your/path/for/your/notes_tag2',
+}
+
+def get_pdf_link_text(note_time, pdf_filename, pdf_filepath):
+    return f"These notes are from Rocketbook, generated on `{note_time}`, this is the link to the source PDF: [{pdf_filename}]({pdf_filepath})\n\n"

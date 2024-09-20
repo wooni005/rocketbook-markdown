@@ -1,0 +1,13 @@
+[Unit]
+Description=Rocketbook Conversion to Markdown
+After=syslog.target network.target
+
+[Service]
+Type=simple
+ExecStart=/usr/bin/python3 /home/pi/rocketbook-markdown/rocketbook-markdown.py
+User=pi
+Restart=always
+RestartSec=2s
+
+[Install]
+WantedBy=multi-user.target
