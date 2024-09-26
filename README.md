@@ -4,7 +4,7 @@ This script is waiting for a Rocketbook email with a PDF and a OCR text attachme
 
 ## What is a Rocketbook?
 
-A Rocketbook is a reusable notebook that combines traditional handwriting with digital technology. You write on the pages with a special pen (Pilot Frixion), and then use a smartphone app to scan your notes and save them to the cloud. The pages can be erased with water or a microwave, making them endlessly reusable. It's a great way to stay organized while reducing paper waste.
+A [Rocketbook](https://getrocketbook.com/) is a reusable notebook that combines traditional handwriting with digital technology. You write on the pages with a special pen (Pilot Frixion), and then use a smartphone app to scan your notes and save them to the cloud. The pages can be erased with water or a microwave, making them endlessly reusable. It's a great way to stay organized while reducing paper waste.
 
 ## How does it work?
 
@@ -17,7 +17,7 @@ Why is **IMAP IDLE** used? With the IMAP IDLE command, the conversion is respond
 TODO:
 - Sample input PDF and output
 - Tijd uit filename halen?
-- config.py in .gitignore zetten
+
 
 ## Installation
 
@@ -62,6 +62,7 @@ MAIL_CHECK_INTERVAL = 60 # [sec]
 FORCE_DISABLE_IDLE_COMMAND = False
 
 # Conversion settings
+DATE_IN_FILENAME = False
 CONFIG_REMOVE_LINE_ENDINGS = True
 TAG_TO_PATH_CONVERSION = {
     'Rocketbook': 'notes/rocketbook', # Default tag with default path
@@ -85,6 +86,8 @@ Remark! Don't use a too short interval, risk that your account will be suspended
 **FORCE_DISABLE_IDLE_COMMAND**: Set to True if you want to disable the IDLE command. The default value is False.
 Use this when you have trouble with the IDLE command and no updates are received. See Tips and Tricks->Google Workspace
 
+**DATE_IN_FILENAME**: When set to True, the date is added to the filenames. The default value is False. This is handy when you scan multiple times the same notes.
+
 **CONFIG_REMOVE_LINE_ENDINGS**: Set to True if you want to remove line endings from the converted files. The default value is True.
 In case you want to keep line endings, like in the notes, set it to False.
 
@@ -95,23 +98,23 @@ In case you want to keep line endings, like in the notes, set it to False.
 Open de Rocketbook application and perform the following settings:
 
 - Settings - Handwriting Recognition (OCR)
-  - Smart Titles: Enable
-  - Use Smart Titles to group scans: Disable
-  - Smart Search: Enable
-  - Smart lists: Disable (Is making automatically todo lists for you)
-  - Smart Tags: Disable (Is only for Rocketbook Pro pages)
-- File Naming Template: Page-Time
-- Email Naming Template: Filename-Time
+  - Smart Titles: **Enable**
+  - Use Smart Titles to group scans: **Disable**
+  - Smart Search: **Enable**
+  - Smart lists: **Disable** (Is making automatically todo lists for you)
+  - Smart Tags: **Disable** (Is only for Rocketbook Pro pages)
+- File Naming Template: **Page-Time**
+- Email Naming Template: **Filename-Time**
 
 Destinations: Pick one of the icons you want to use for this script:
-- Change Recipient: 'your@email' (Your email address which is used in the script)
-- Change Destination: Email
-- File Type: PDF
-- Bundle Scans: Enable
-- OCR Transription: Enable
-  - Attach: Enable
-- Send Smart Tag: Enable
-- Smart Tag Subject Line: Enable
+- Change Recipient: **'your@email'** (Your email address which is used in the script)
+- Change Destination: **Email**
+- File Type: **PDF**
+- Bundle Scans: **Enable**
+- OCR Transription: **Enable**
+  - Attach: **Enable**
+- Send Smart Tag: **Enable**
+- Smart Tag Subject Line: **Enable**
 
 ## Testing the script
 
@@ -171,6 +174,8 @@ It is possible to use Markdown format already in your notes, so you don't need t
 For example you use the following Markdown syntax in your Rocketbook handwritten notes:
 
 - Headings: H1='#', H2='##', H3='###', etc
+- Bullet lists with dashes: - or *
+- Numbered lists with numbers: 1. etc
 - Bold: **bold**
 - Italic: _italic_ or *italic*
 - Strikethrough (~): ~~strikethrough~~

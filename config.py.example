@@ -1,12 +1,14 @@
 # Mail settings
-IMAP_SERVER = 'imap.yourhost.com'
+IMAP_SERVER = 'imap.gmail.com'
 IMAP_PORT = 993
 USERNAME = 'your@email'
 PASSWORD = 'yourPassword'
 MAILBOX_FOLDER = "Rocketbook"
 MAIL_CHECK_INTERVAL = 60 # [sec]
+FORCE_DISABLE_IDLE_COMMAND = False
 
 # Conversion settings
+DATE_IN_FILENAME = False
 CONFIG_REMOVE_LINE_ENDINGS = True
 TAG_TO_PATH_CONVERSION = {
     'Rocketbook': 'notes/rocketbook', # Default tag with default path
