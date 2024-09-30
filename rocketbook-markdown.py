@@ -1,8 +1,8 @@
 import time
 import os
-import imaplib2
-import datetime
+from imapclient import IMAPClient
 import email
+import datetime
 import markdown
 import html2text
 import traceback
@@ -11,7 +11,7 @@ import config
 
 DEBUG = True
 idle_command = False
-mail = None
+server = None
 
 def print_debug(text):
     if DEBUG:
@@ -30,241 +30,225 @@ def move_file_to_folder_and_check_if_exists(filename_org, target_folder_name, no
             filename_new = f"{note_title}-{note_date}-{count}.md"
         os.replace(filename_org, os.path.join(target_folder_name, filename_new))
 
-def process_mail_with_notes(mail):
-    if mail is None:
+def process_mail_with_notes():
+    global server
+    if server is None:
         return
 
     # today = datetime.date.today()
     # # yesterday = today - datetime.timedelta(days=1)
     # day_str = today.strftime('%d-%b-%Y')
-    # status, messages = mail.search(None, '(SINCE "%s")' % day_str)
+    # status, messages = server.search(None, '(SINCE "%s")' % day_str)
 
-    # status, messages = mail.search(None, '(UNSEEN)')
-    status, messages = mail.search(None, 'ALL')
+    # Search for unseen messages
+    # messages = server.search("UNSEEN")
+    messages = server.search("ALL")
 
-    print_debug(f"Status: {status} Number of unread messages: {len(messages[0].split())}")
+    for uid, message_data in server.fetch(messages, "RFC822").items():
+        message = email.message_from_bytes(message_data[b"RFC822"])
+        print(uid, message.get("From"), message.get("Subject"))
 
-    if status == 'OK':
-        # Loop door de emails
-        for num in messages[0].split():
-            status, msg = mail.fetch(num, '(RFC822)')
-            raw_message = msg[0][1].decode('utf-8')
+        subject = message.get("Subject")
+        print_debug(f"Subject: {subject}")
 
-            # print_debug(f"Message {raw_message}")
-            # Parse de email
-            # if isinstance(raw_message, int):
-            #     print("Error: raw_message is an integer")
-            #     print(raw_message)
-            #     continue
+        match_title = re.match(r'^(.+?)-(\d+\.\d+\.\d+) \[.*?\]', subject)
+        if match_title is not None:
+            # Regex found a match
+            note_title = match_title.group(1)
+            # Check if there is a note title found in subject
+            note_date = match_title.group(2)
+        else:
+            # No match with the subject default the title to Rocketbook with timestamp HH.MM.SS
+            note_date = datetime.datetime.now().strftime('%H.%M.%S')
+            note_title = f'Rocketbook-{note_date}'
 
-            # message = email.message_from_bytes(raw_message)
-            message = email.message_from_string(raw_message)
+        # Get the tags from the subject
+        tags = re.findall(r'\[(.*?)\]', subject)
 
-            subject = message['Subject']
-            print_debug(subject)
+        # if no tags found default to Rocketbook
+        if len(tags) == 0:
+            tags = ['Rocketbook']
 
-            # match_title = re.match(r'^(.+?)-(\d+\.\d+\.\d+) \[.*?\]', subject)
-            # if match_title is not None:
-            #     # Regex found a match
-            #     note_title = match_title.group(1)
-            #     # Check if there is a note title found in subject
-            #     note_date = match_title.group(2)
-            # else:
-            #     # No match with the subject default the title to Rocketbook with timestamp HH.MM.SS
-            #     note_date = datetime.datetime.now().strftime('%H.%M.%S')
-            #     note_title = f'Rocketbook-{note_date}'
+        print_debug(f"Note title: {note_title}, tag(s): {tags} " )
 
-            # # Get the tags from the subject
-            # tags = re.findall(r'\[(.*?)\]', subject)
+        # Check if there is an 'application/plain' attachment
+        ocr_text_source = 'text/html' # Default, the text is in the email body and not as an attachment
+        for part in message.walk():
+            # print(f"Content type: {part.get_content_type()}")
+            if part.get_content_type() == 'application/plain':
+                # There is a plain text attachment with the OCR
+                ocr_text_source = 'application/plain'
 
-            # # if no tags found default to Rocketbook
-            # if len(tags) == 0:
-            #     tags = ['Rocketbook']
+        print_debug("OCR text source: " + ocr_text_source)
 
-            # print_debug(f"Note title: {note_title}, tag(s): {tags} " )
+        # Loop through the attachments
+        for part in message.walk():
+            print(f"Content type: {part.get_content_type()}")
+            if part.get_content_type() == ocr_text_source:
+                print(f"{part}")
+                # Get the attachment
+                attachment = part.get_payload(decode=True)
+                print_debug(attachment.decode('utf-8'))
+                text = attachment.decode('utf-8')
 
-            # # Check if there is an 'application/plain' attachment
-            # ocr_text_source = 'text/html' # Default, the text is in the email body and not as an attachment
-            # for part in message.walk():
-            #     if part.get_content_type() == 'application/plain':
-            #         # Yeah, there is a plain text attachment with the OCR
-            #         ocr_text_source = 'application/plain'
+                # Convert plain text to Markdown which contains HTML
+                html_text = markdown.markdown(text)
+                # print_debug(html_text)
 
-            # # Loop through the attachments
-            # for part in message.walk():
-            #     if part.get_content_type() == ocr_text_source:
-            #         print_debug("OCR text source: " + part.get_content_type())
-                    # Get the attachment
-                    # attachment = part.get_payload()
-                    # print_debug(attachment.decode('utf-8'))
-                    # text = attachment.decode('utf-8')
+                if config.CONFIG_REMOVE_LINE_ENDINGS:
+                    h = html2text.HTML2Text()
+                    h.ignore_images = True
+                    html_text2 = h.handle(html_text)
 
-            #         # Convert plain text to Markdown which contains HTML
-            #         html_text = markdown.markdown(text)
-            #         # print_debug(html_text)
+                # Improve the Markdown output
+                markdown_text = html_text2.replace('<h1>', '# ').replace('</h1>', '')
+                markdown_text = html_text2.replace('<h2>', '## ').replace('</h2>', '')
+                markdown_text = html_text2.replace('<h3>', '### ').replace('</h3>', '')
+                markdown_text = html_text2.replace('<p>', '\n').replace('</p>', '\n')
+                markdown_text = html_text2.replace('<strong>', '**').replace('</strong>', '**')
+                markdown_text = html_text2.replace('<em>', '*').replace('</em>', '*')
+                markdown_text = html_text2.replace('<br>', '\n')
 
-            #         if config.CONFIG_REMOVE_LINE_ENDINGS:
-            #             h = html2text.HTML2Text()
-            #             h.ignore_images = True
-            #             html_text2 = h.handle(html_text)
+                # Make a link at the top of the page in the markdown text to the pdf file
+                pdf_file = None
+                for part in message.walk():
+                    if part.get_content_type() == 'application/pdf':
+                        pdf_file = part.get_payload(decode=True)
+                        break
+                if pdf_file:
+                    if config.DATE_IN_FILENAME:
+                        pdf_filename = f"{note_title}-{note_date}.pdf"
+                    else:
+                        pdf_filename = f"{note_title}.pdf"
+                    with open(pdf_filename, 'wb') as f:
+                        f.write(pdf_file)
+                    time_format = note_date.replace('.', ':')
+                    markdown_text = config.get_pdf_link_text(time_format, pdf_filename, pdf_filename) + markdown_text
 
-            #         # Improve the Markdown output
-            #         markdown_text = html_text2.replace('<h1>', '# ').replace('</h1>', '')
-            #         markdown_text = html_text2.replace('<h2>', '## ').replace('</h2>', '')
-            #         markdown_text = html_text2.replace('<h3>', '### ').replace('</h3>', '')
-            #         markdown_text = html_text2.replace('<p>', '\n').replace('</p>', '\n')
-            #         markdown_text = html_text2.replace('<strong>', '**').replace('</strong>', '**')
-            #         markdown_text = html_text2.replace('<em>', '*').replace('</em>', '*')
-            #         markdown_text = html_text2.replace('<br>', '\n')
+                # Store the markdown in a file
+                if config.DATE_IN_FILENAME:
+                    markdown_filename = f"{note_title}-{note_date}.md"
+                else:
+                    markdown_filename = f"{note_title}.md"
+                with open(markdown_filename, 'w') as f:
+                    f.write(markdown_text)
 
-            #         # Make a link at the top of the page in the markdown text to the pdf file
-            #         pdf_file = None
-            #         for part in message.walk():
-            #             if part.get_content_type() == 'application/pdf':
-            #                 pdf_file = part.get_payload(decode=True)
-            #                 break
-            #         if pdf_file:
-            #             if config.DATE_IN_FILENAME:
-            #                 pdf_filename = f"{note_title}-{note_date}.pdf"
-            #             else:
-            #                 pdf_filename = f"{note_title}.pdf"
-            #             with open(pdf_filename, 'wb') as f:
-            #                 f.write(pdf_file)
-            #             time_format = note_date.replace('.', ':')
-            #             markdown_text = config.get_pdf_link_text(time_format, pdf_filename, pdf_filename) + markdown_text
+                if DEBUG:
+                    # Store the HTML in a file for debugging/checking
+                    if config.DATE_IN_FILENAME:
+                        html_filename = f"{note_title}-{note_date}.html"
+                    else:
+                        html_filename = f"{note_title}.html"
+                    with open(html_filename, 'w') as f:
+                        f.write(html_text)
+                else:
+                    html_filename = None
 
-            #         # Store the markdown in a file
-            #         if config.DATE_IN_FILENAME:
-            #             markdown_filename = f"{note_title}-{note_date}.md"
-            #         else:
-            #             markdown_filename = f"{note_title}.md"
-            #         with open(markdown_filename, 'w') as f:
-            #             f.write(markdown_text)
+                # Move the markdown file to the correct folder
+                folder_name = tags[0] # Take the first tag for the folder
+                if folder_name in config.TAG_TO_PATH_CONVERSION:
+                    folder_name = config.TAG_TO_PATH_CONVERSION[folder_name]
 
-            #         if DEBUG:
-            #             # Store the HTML in a file for debugging/checking
-            #             if config.DATE_IN_FILENAME:
-            #                 html_filename = f"{note_title}-{note_date}.html"
-            #             else:
-            #                 html_filename = f"{note_title}.html"
-            #             with open(html_filename, 'w') as f:
-            #                 f.write(html_text)
-            #         else:
-            #             html_filename = None
+                # Check if the folder exists
+                if not os.path.exists(folder_name):
+                    # Create the folder
+                    os.makedirs(folder_name)
 
-            #         # Move the markdown file to the correct folder
-            #         folder_name = tags[0] # Take the first tag for the folder
-            #         if folder_name in config.TAG_TO_PATH_CONVERSION:
-            #             folder_name = config.TAG_TO_PATH_CONVERSION[folder_name]
+                # Move the Markdown file
+                move_file_to_folder_and_check_if_exists(markdown_filename, folder_name, note_title, note_date)
+                if html_filename:
+                    # Move the HTML file if it exists
+                    move_file_to_folder_and_check_if_exists(html_filename, folder_name, note_title, note_date)
+                if pdf_file:
+                    # Move the PDF file if it exists
+                    move_file_to_folder_and_check_if_exists(pdf_filename, folder_name, note_title, note_date)
 
-            #         # Check if the folder exists
-            #         if not os.path.exists(folder_name):
-            #             # Create the folder
-            #             os.makedirs(folder_name)
-
-            #         # Move the Markdown file
-            #         move_file_to_folder_and_check_if_exists(markdown_filename, folder_name, note_title, note_date)
-            #         if html_filename:
-            #             # Move the HTML file if it exists
-            #             move_file_to_folder_and_check_if_exists(html_filename, folder_name, note_title, note_date)
-            #         if pdf_file:
-            #             # Move the PDF file if it exists
-            #             move_file_to_folder_and_check_if_exists(pdf_filename, folder_name, note_title, note_date)
-
-def check_idle_capability(mail):
+def check_idle_capability(server):
     # Send a "CAPABILITY" command
-    cap_response = mail.capability()[1][0].decode('utf-8')
-    # print_debug(cap_response)
+    response = server.capabilities()
+    # print_debug(f"Capabilities: {response}")
 
     # Check the "IDLE" capability
-    if 'IDLE' in cap_response:
-        print_debug("The server supports IDLE mode")
+    if b"IDLE" in response:
+        print_debug("Server supports IDLE")
         return True
     else:
-        print_debug("The server does not support IDLE mode")
+        print("Server does not support IDLE")
         return False
 
 def connect_to_imap():
     try:
-        mail = imaplib2.IMAP4_SSL(config.IMAP_SERVER, config.IMAP_PORT)
-        mail.login(config.USERNAME, config.PASSWORD)
-        mail.select(config.MAILBOX_FOLDER)
-        return mail
+        server = IMAPClient(config.IMAP_SERVER, timeout=config.MAIL_CHECK_INTERVAL)
+        server.login(config.USERNAME, config.PASSWORD)
+        server.select_folder(config.MAILBOX_FOLDER)
+        return server
     except Exception as e:
         print_debug(f'ERROR while connecting to IMAP-server: {e}')
         return None
 
-def reconnect_to_imap(mail):
-    try:
-        mail.logout()
-        mail = connect_to_imap()
-        return mail
-    except Exception as e:
-        print_debug(f'ERROR while reconnecting to IMAP-server: {e}')
-        return None
-
 def main():
-    global mail
+    global server
 
-    starting_up = True
-    while True:
-        if mail is None:
+    idle_mode = False
+
+    exit_loop = False
+    while not exit_loop:
+        if server is None:
+            # No server connection, try to connect
             print_debug("No server connection, connect to IMAP server")
-            mail = connect_to_imap()
-            if mail is None:
+            server = connect_to_imap()
+            if server is None:
                 # Connect failed, sleep for a while and try again
                 time.sleep(config.MAIL_CHECK_INTERVAL)
             else:
-                # Connect successful, check if the server supports IDLE
-                if not config.FORCE_DISABLE_IDLE_COMMAND:
-                    idle_command = check_idle_capability(mail)
-                else:
-                    # For example for Google Workspace, the server does not work well with IDLE
-                    idle_command = False
+                if not check_idle_capability(server):
+                    server.logout()
+                    time.sleep(60)
+                    exit(1)
+            if server is None:
+                # No server connection, sleep for a while
+                print_debug("No server connection, sleep for a while")
+                time.sleep(300)
 
-        if mail is not None:
-            try:
-                if not idle_command:
-                    # Not using IDLE, so connect to the server
-                    mail = connect_to_imap()
-                else:
-                    # Using IDLE, so wait for new mail
-                    print_debug("Wait for new mail with IDLE command")
-                    if not starting_up:
-                        status, data = mail.idle()
+        if server is not None:
+            # Server connection OK, process mail
 
-                        if status == 'OK':
+            if idle_mode:
+                # Start IDLE mode
+                server.idle()
+                print_debug("Idle mode activated, wait for new mail")
 
-                            print_debug("Server connection OK")
-                        else:
-                            print_debug("Server connection not OK, send NOOP command to test the server connection")
-                            response = mail.noop()
-                            print_debug(f"NOOP response: {response}")
+                while not exit_loop:
+                    try:
+                        # Wait for up to 30 seconds for an IDLE response
+                        responses = server.idle_check()
+                        # print_debug(f"Server sent: {responses}")
 
-                        print_debug(f"typ: {status} data: {data}")
-                    else:
-                        starting_up = False
-                
-                process_mail_with_notes(mail)
+                        if responses:
+                            # Response from IDLE mode
+                            for response in responses:
+                                print(f"Server sent: {response}")
+                                # Loop through the responses
+                                if response[1] == b'EXISTS':
+                                    print_debug("Mailbox updated")
+                                    # Stop IDLE mode while processing the mail
+                                    server.idle_done()
 
-                if idle_command:
-                    # When using IDLE, we need to send DONE to the server
-                    print_debug("Let the server know the processing is done")
-                    mail.send(b'DONE\r\n')
-                else:
-                    # When not using IDLE, close the connection and sleep for a while
-                    mail.close()
-                    mail.logout()
-                    print_debug("No IDLE command just sleep for a while")
-                    time.sleep(config.MAIL_CHECK_INTERVAL)
+                                    process_mail_with_notes()
 
-            except Exception as e:
-                print_debug(f'ERROR while getting notes from IMAP-server: {e}')
-                print_debug(traceback.format_exc())
-                mail = reconnect_to_imap(mail)
-                if mail is None:
-                    # Reconnect failed, sleep for a while and try again
-                    time.sleep(config.MAIL_CHECK_INTERVAL)
+                                    # Enable IDLE mode again
+                                    server.idle()
+                            
+                    except KeyboardInterrupt:
+                        exit_loop = True
+                        break
+
+                server.idle_done()
+                print_debug("\nIDLE mode done")
+            else:
+                process_mail_with_notes()
+                exit_loop = True
+            server.logout()
 
 if __name__ == '__main__':
     main()
