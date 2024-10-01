@@ -12,12 +12,8 @@ The script reads the Rocketbook email, which contains a PDF and an OCR text atta
 The subject of the email is used for the filename of the note, the tags between brackets are used to store the content in the correct notes folder.
 The script converts the PDF to Markdown and puts it in the right folder. Also the PDF will be moved to this folder with the same filename. At the top of the Markdown file is a link to the original PDF.
 
-Why is **IMAP IDLE** used? With the IMAP IDLE command, the conversion is responding immediately. It is also possible to check the mail on polling base, but to many requests to the IMAP server is not recommended. Your account can be suspended if you put the delay time too short. So IMAP IDLE is ideal, it is constantly waiting for a new mail. If you have trouble with the IDLE command, you can disable it in the configuration with FORCE_DISABLE_IDLE_COMMAND = True.
-
-TODO:
-- Sample input PDF and output
-- Tijd uit filename halen?
-
+Why is **IMAP IDLE** used? With the IMAP IDLE command, the conversion is responding immediately. It is also possible to check the mail on polling base, but to many requests to the IMAP server is not recommended. Your account can be suspended if you put the delay time too short. So IMAP IDLE is ideal, it is constantly waiting for a new mail.
+Remark: With the IDLE command, this script is constantly waiting for a new mail. But the IMAP servers are not giving imidiately a response. It can take some time to get a response, to speed up the waiting, you can use an external IMAP client and sync the mail, this will trigger also the IDLE command of this script.
 
 ## Installation
 
@@ -59,7 +55,6 @@ USERNAME = 'your@email'
 PASSWORD = 'yourPassword'
 MAILBOX_FOLDER = "Rocketbook"
 MAIL_CHECK_INTERVAL = 60 # [sec]
-FORCE_DISABLE_IDLE_COMMAND = False
 
 # Conversion settings
 DATE_IN_FILENAME = False
@@ -83,15 +78,14 @@ TAG_TO_PATH_CONVERSION = {
 **MAIL_CHECK_INTERVAL** is the time in seconds between each check of the IMAP folder. The default value is 60 seconds.
 Remark! Don't use a too short interval, risk that your account will be suspended.
 
-**FORCE_DISABLE_IDLE_COMMAND**: Set to True if you want to disable the IDLE command. The default value is False.
-Use this when you have trouble with the IDLE command and no updates are received. See Tips and Tricks->Google Workspace
-
 **DATE_IN_FILENAME**: When set to True, the date is added to the filenames. The default value is False. This is handy when you scan multiple times the same notes.
 
 **CONFIG_REMOVE_LINE_ENDINGS**: Set to True if you want to remove line endings from the converted files. The default value is True.
 In case you want to keep line endings, like in the notes, set it to False.
 
 **TAG_TO_PATH_CONVERSION**: Set the tags and their corresponding paths. The default value is the Rocketbook tag with the default path.
+
+**DEBUG**: Set to True if you want to debug the script. The default value is False.
 
 ## Rocketbook Destination Settings
 

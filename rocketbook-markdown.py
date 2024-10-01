@@ -9,12 +9,10 @@ import traceback
 import re
 import config
 
-DEBUG = True
-idle_command = False
 server = None
 
 def print_debug(text):
-    if DEBUG:
+    if config.DEBUG:
         print(text)
 
 def move_file_to_folder_and_check_if_exists(filename_org, target_folder_name, note_title, note_date):
@@ -41,8 +39,8 @@ def process_mail_with_notes():
     # status, messages = server.search(None, '(SINCE "%s")' % day_str)
 
     # Search for unseen messages
-    # messages = server.search("UNSEEN")
-    messages = server.search("ALL")
+    messages = server.search("UNSEEN")
+    # messages = server.search("ALL")
 
     for uid, message_data in server.fetch(messages, "RFC822").items():
         message = email.message_from_bytes(message_data[b"RFC822"])
@@ -133,7 +131,7 @@ def process_mail_with_notes():
                 with open(markdown_filename, 'w') as f:
                     f.write(markdown_text)
 
-                if DEBUG:
+                if config.DEBUG:
                     # Store the HTML in a file for debugging/checking
                     if config.DATE_IN_FILENAME:
                         html_filename = f"{note_title}-{note_date}.html"
@@ -189,8 +187,7 @@ def connect_to_imap():
 def main():
     global server
 
-    idle_mode = False
-
+    test_mode = False
     exit_loop = False
     while not exit_loop:
         if server is None:
@@ -213,7 +210,7 @@ def main():
         if server is not None:
             # Server connection OK, process mail
 
-            if idle_mode:
+            if not test_mode:
                 # Start IDLE mode
                 server.idle()
                 print_debug("Idle mode activated, wait for new mail")
