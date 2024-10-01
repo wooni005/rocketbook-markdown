@@ -176,7 +176,7 @@ def check_idle_capability(server):
 
 def connect_to_imap():
     try:
-        server = IMAPClient(config.IMAP_SERVER, timeout=config.MAIL_CHECK_INTERVAL)
+        server = IMAPClient(config.IMAP_SERVER, timeout=config.IDLE_MODE_TIMEOUT)
         server.login(config.USERNAME, config.PASSWORD)
         server.select_folder(config.MAILBOX_FOLDER)
         return server
@@ -196,7 +196,7 @@ def main():
             server = connect_to_imap()
             if server is None:
                 # Connect failed, sleep for a while and try again
-                time.sleep(config.MAIL_CHECK_INTERVAL)
+                time.sleep(900) # 15 minutes
             else:
                 if not check_idle_capability(server):
                     server.logout()

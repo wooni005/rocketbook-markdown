@@ -4,8 +4,7 @@ IMAP_PORT = 993
 USERNAME = 'your@email'
 PASSWORD = 'yourPassword'
 MAILBOX_FOLDER = "Rocketbook"
-MAIL_CHECK_INTERVAL = 60 # [sec]
-FORCE_DISABLE_IDLE_COMMAND = False
+IDLE_MODE_TIMEOUT = 1200 # [sec]
 
 # Conversion settings
 DATE_IN_FILENAME = False
@@ -15,6 +14,7 @@ TAG_TO_PATH_CONVERSION = {
     'YourTag1': '/your/path/for/your/notes_tag1',
     'YourTag2': '/your/path/for/your/notes_tag2',
 }
+DEBUG = True # Set to True to print debug messages
 
 def get_pdf_link_text(note_time, pdf_filename, pdf_filepath):
     return f"These notes are from Rocketbook, generated on `{note_time}`, this is the link to the source PDF: [{pdf_filename}]({pdf_filepath})\n\n"
