@@ -31,7 +31,8 @@ $ chmod +x rocketbook-markdown.py
 
 Install the required Python3 modules:
 ```bash
-$ sudo pip3 install imaplib2 email python-markdown html2text
+$ sudo apt-get install python3 
+$ sudo pip3 install imapclient html2text
 ```
 
 ## Configuration
