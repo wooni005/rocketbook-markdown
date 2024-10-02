@@ -1,6 +1,6 @@
 # Rocketbook to Markdown
 
-This script is waiting for a Rocketbook email with a PDF and a OCR text attachment. When receiving an email it converts the contents automatically to Markdown and puts it in the right notes folder.
+This script is waiting for a Rocketbook email with a PDF and a OCR text attachment by using the IMAP IDLE command to get faster conversion results. When receiving an email it converts the contents automatically to Markdown and puts it in the right notes folder.
 
 ## What is a Rocketbook?
 
