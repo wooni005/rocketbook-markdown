@@ -131,6 +131,13 @@ Remark: Make sure that you switch off the DEBUG mode before running the service.
 
 ```bash
 $ cd rocketbook-markdown
+# Adapt in the service file the WorkingDirectory and ExecStart to the folders you want to use
+$ nano rocketbook-markdown.service
+...
+WorkingDirectory=/home/pi/ssd/nas/Rocketbook
+ExecStart=/usr/bin/python3 /home/pi/scripts/python/rocketbook-markdown/rocketbook-markdown.py
+...
+
 # Copy the service file to the system
 $ sudo cp rocketbook-markdown.service /etc/systemd/system
 
